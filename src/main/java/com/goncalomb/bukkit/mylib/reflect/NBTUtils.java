@@ -22,7 +22,6 @@ package com.goncalomb.bukkit.mylib.reflect;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.Optional;
 
 import org.bukkit.Location;
 import org.bukkit.block.Block;
@@ -45,7 +44,6 @@ public final class NBTUtils {
 	// Minecraft's Entity Class;
 	private static Method _Entity_save;
 	private static Method _Entity_getBukkitEntity;
-	private static Method _Entity_setPosition;
 
 	// CraftEntity Class
 	private static Method _CraftEntity_getHandle;
@@ -62,10 +60,9 @@ public final class NBTUtils {
 
 	// Minecraft's World
 	private static Method _World_getTileEntity;
-	private static Method _World_addEntity;
 
-	// Minecraft's EntityTypes Class
-	private static Method _EntityTypes_a; // Spawn an entity from a NBTCompound.
+	// Minecraft's ChunkRegionLoader Class
+	private static Method _ChunkRegionLoader_a; // Spawn an entity from a NBTCompound.
 
 	static void prepareReflection() throws SecurityException, NoSuchMethodException, NoSuchFieldException {
 		Class<?> nbtTagCompoundClass = BukkitReflect.getMinecraftClass("NBTTagCompound");
@@ -86,7 +83,6 @@ public final class NBTUtils {
 		Class<?> minecraftEntityClass = BukkitReflect.getMinecraftClass("Entity");
 		_Entity_save = minecraftEntityClass.getMethod("save", nbtTagCompoundClass);
 		_Entity_getBukkitEntity = minecraftEntityClass.getMethod("getBukkitEntity");
-		_Entity_setPosition = minecraftEntityClass.getMethod("setPosition", double.class, double.class, double.class);
 
 		Class<?> craftEntityClass = BukkitReflect.getCraftBukkitClass("entity.CraftEntity");
 		_CraftEntity_getHandle = craftEntityClass.getMethod("getHandle");
@@ -110,10 +106,9 @@ public final class NBTUtils {
 
 		Class<?> minecraftWorldClass = BukkitReflect.getMinecraftClass("World");
 		_World_getTileEntity = minecraftWorldClass.getMethod("getTileEntity", minecraftBlockPositionClass);
-		_World_addEntity = minecraftWorldClass.getMethod("addEntity", minecraftEntityClass);
 
-		Class<?> minecraftEntityTypesClass = BukkitReflect.getMinecraftClass("EntityTypes");
-		_EntityTypes_a = minecraftEntityTypesClass.getMethod("a", nbtTagCompoundClass, minecraftWorldClass);
+		Class<?> minecraftChunkRegionLoaderClass = BukkitReflect.getMinecraftClass("ChunkRegionLoader");
+		_ChunkRegionLoader_a = minecraftChunkRegionLoaderClass.getMethod("a", nbtTagCompoundClass, minecraftWorldClass, double.class, double.class, double.class, boolean.class);
 	}
 
 	private NBTUtils() { }
@@ -129,16 +124,12 @@ public final class NBTUtils {
 		return data;
 	}
 
-	@SuppressWarnings("unchecked")
 	public static Entity spawnEntity(NBTTagCompound data, Location location) {
 		Object worldHandle = BukkitReflect.invokeMethod(location.getWorld(), _CraftWorld_getHandle);
-		Optional<Object> entityHandleOp = (Optional<Object>) BukkitReflect.invokeMethod(null, _EntityTypes_a, data._handle, worldHandle);
-		if (!entityHandleOp.isPresent()) {
+		Object entityHandle = BukkitReflect.invokeMethod(null, _ChunkRegionLoader_a, data._handle, worldHandle, location.getX(), location.getY(), location.getZ(), true);
+		if (entityHandle == null) {
 			return null;
 		}
-		Object entityHandle = entityHandleOp.get();
-		BukkitReflect.invokeMethod(entityHandle, _Entity_setPosition, location.getX(), location.getY(), location.getZ());
-		BukkitReflect.invokeMethod(worldHandle, _World_addEntity, entityHandle);
 		return (Entity) BukkitReflect.invokeMethod(entityHandle, _Entity_getBukkitEntity);
 	}
 
