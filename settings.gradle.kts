@@ -1,6 +1,5 @@
 rootProject.name = "nbteditor"
 include(":adapter_api")
-include(":adapter_v1_16_R3")
 include(":adapter_v1_18_R1")
 include(":adapter_v1_18_R2")
 include(":NBTEditor")
